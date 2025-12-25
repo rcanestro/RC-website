@@ -84,6 +84,13 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
+
+        /* Form input focus styles */
+        .form-input:focus {
+            outline: none;
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -131,6 +138,20 @@
             </svg>
         );
 
+        const Mail = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <rect width="20" height="16" x="2" y="4" rx="2"/>
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
+        );
+
+        const Send = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+        );
+
         // --- Background Animation Component ---
         const SoundWaves = ({ speed = 2.0 }) => {
             const canvasRef = useRef(null);
@@ -140,59 +161,48 @@
                 const ctx = canvas.getContext('2d');
                 let width, height;
                 let animationFrameId;
-                
-                let bars = [];
-                const barCount = 150;
-                const barWidth = 4;
-                const barGap = 4;
-                let positionOffset = 0;
+                let phase = 0;
 
                 const resize = () => {
                     width = canvas.width = window.innerWidth;
                     height = canvas.height = window.innerHeight;
-                    // Initialize bars with a few extra for smooth scrolling
-                    bars = Array.from({ length: barCount + 2 }, () => Math.random() * 100 + 20);
                 };
 
                 const draw = () => {
                     ctx.clearRect(0, 0, width, height);
                     
-                    // Update position offset based on speed
-                    positionOffset += speed;
+                    phase += speed * 0.03;
 
-                    // Check if we need to shift bars
-                    if (positionOffset >= (barWidth + barGap)) {
-                        bars.shift();
-                        // Add new bar with some variation based on the previous one to make it smoother
-                        const lastBar = bars[bars.length - 1] || 50;
-                        let newBar = lastBar + (Math.random() * 40 - 20);
-                        newBar = Math.max(20, Math.min(200, newBar)); // Clamp between 20 and 200
-                        bars.push(newBar);
-                        
-                        // Reset position offset, keeping any remainder
-                        positionOffset -= (barWidth + barGap);
-                    }
+                    // Reduced gap and bar width for a denser "forest" of transients
+                    const barWidth = 3;
+                    const barGap = 2;
+                    const totalBarWidth = barWidth + barGap;
                     
-                    const startX = (width - (barCount * (barWidth + barGap))) / 2;
+                    const numBars = Math.ceil(width / totalBarWidth);
                     const centerY = height / 2;
 
-                    bars.forEach((barHeight, index) => {
-                        const x = startX + index * (barWidth + barGap) - positionOffset;
+                    for (let i = 0; i < numBars; i++) {
+                        const x = i * totalBarWidth;
                         
-                        // Calculate opacity based on distance from center
-                        const distanceFromCenter = Math.abs(index - barCount / 2);
-                        const opacity = Math.max(0.1, 0.8 - (distanceFromCenter / (barCount / 2)) * 0.7);
+                        // 't' adjusted for more rapid changes across the width
+                        const t = i * 0.15 - phase; 
+
+                        // Composite wave logic
+                        let wave = Math.sin(t) + Math.sin(t * 0.4) + Math.sin(t * 2.1) * 0.5;
+                        wave = wave / 2.5;
+
+                        // TRIPLE HEIGHT: Max bar height increased from 120 to 360
+                        let barHeight = Math.pow(Math.abs(wave), 2.5) * 360;
                         
-                        // Draw the bar
-                        ctx.fillStyle = `rgba(6, 182, 212, ${opacity})`; // Cyan color
+                        barHeight = Math.max(8, barHeight);
+
+                        const centerIndex = numBars / 2;
+                        const distFromCenter = Math.abs(i - centerIndex);
+                        const opacity = Math.max(0.12, 0.7 - (distFromCenter / centerIndex));
+
+                        ctx.fillStyle = `rgba(6, 182, 212, ${opacity})`;
                         ctx.fillRect(x, centerY - barHeight / 2, barWidth, barHeight);
-                        
-                        // Add a little glow effect
-                        ctx.shadowBlur = 10;
-                        ctx.shadowColor = `rgba(6, 182, 212, ${opacity * 0.5})`;
-                        ctx.fillRect(x, centerY - barHeight / 2, barWidth, barHeight);
-                        ctx.shadowBlur = 0;
-                    });
+                    }
 
                     animationFrameId = requestAnimationFrame(draw);
                 };
@@ -205,7 +215,7 @@
                     window.removeEventListener('resize', resize);
                     cancelAnimationFrame(animationFrameId);
                 };
-            }, []);
+            }, [speed]);
 
             return (
                 <canvas 
@@ -215,32 +225,97 @@
             );
         };
 
+        // --- Contact Form Component ---
+        const ContactForm = () => {
+            const [name, setName] = useState('');
+            const [subject, setSubject] = useState('');
+            const [message, setMessage] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const user = 'rcanestro';
+                const domain = 'gmail.com';
+                const emailTo = `${user}@${domain}`;
+                const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("Name: " + name + "\n\n" + message)}`;
+                window.location.href = mailtoLink;
+            };
+
+            return (
+                <div className="w-full mt-12 pt-8 border-t border-slate-700/50">
+                    <div className="flex items-center justify-center gap-2 mb-6 text-cyan-400">
+                        <Mail size={20} />
+                        <h2 className="text-xl font-bold">Contact Me</h2>
+                    </div>
+                    
+                    <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto text-left">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1 ml-1">Name</label>
+                            <input 
+                                type="text" 
+                                required
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="form-input w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-white placeholder-gray-500 transition-all duration-200"
+                                placeholder="Your Name"
+                            />
+                        </div>
+                        
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1 ml-1">Subject</label>
+                            <input 
+                                type="text" 
+                                required
+                                value={subject}
+                                onChange={(e) => setSubject(e.target.value)}
+                                className="form-input w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-white placeholder-gray-500 transition-all duration-200"
+                                placeholder="Inquiry about..."
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1 ml-1">Message</label>
+                            <textarea 
+                                required
+                                rows="4"
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                className="form-input w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-white placeholder-gray-500 transition-all duration-200"
+                                placeholder="How can I help you?"
+                            ></textarea>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            className="w-full mt-2 flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                        >
+                            <Send size={18} />
+                            Send Message
+                        </button>
+                    </form>
+                </div>
+            );
+        };
+
         const App = () => {
             return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-8 relative">
                     <SoundWaves />
 
-                    {/* Main Content Card */}
                     <main className="glass-card w-full max-w-2xl rounded-3xl p-8 md:p-12 text-center opacity-0 animate-fade-in relative overflow-hidden">
-                        
-                        {/* Decorative glow behind the image */}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10"></div>
 
-                        {/* Image Section */}
                         <div className="mb-8 relative inline-block group">
                             <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
                             
-                            {/* Dropbox Image - Updated for white background extension AND blue accent ring */}
                             <div className="p-3 bg-white rounded-full border-4 border-cyan-500 shadow-[0_0_30px_rgba(6,182,212,0.5)] animate-float">
                                 <img 
-                                    src="https://www.dropbox.com/scl/fi/pjwmljx46v85aowj1kler/Ryan_Logo.04.jpg?rlkey=yqaddskwf67greoobom211z0w&st=881ihwrn&raw=1" 
+                                    src="https://raw.githubusercontent.com/rcanestro/RC-website/main/Ryan_Logo.04.jpg" 
                                     alt="Ryan Canestro Logo"
                                     className="relative w-48 h-48 md:w-64 md:h-64 rounded-full object-contain"
                                 />
                             </div>
                         </div>
 
-                        {/* Text Content */}
                         <header className="space-y-4">
                             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-cyan-400 opacity-0 animate-fade-in delay-100">
                                 Ryan Canestro
@@ -260,10 +335,8 @@
                             </div>
                         </header>
 
-                        {/* Divider */}
                         <div className="w-24 h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent mx-auto my-8 opacity-50 rounded-full"></div>
 
-                        {/* Links/Actions */}
                         <div className="opacity-0 animate-fade-in delay-300">
                             <a 
                                 href="http://www.imdb.com/name/nm5237391/reference" 
@@ -275,9 +348,13 @@
                                 <ExternalLink size={16} className="opacity-70 group-hover:translate-x-1 transition-transform" />
                             </a>
                         </div>
+                        
+                        <div className="opacity-0 animate-fade-in delay-400">
+                            <ContactForm />
+                        </div>
+                        
                     </main>
 
-                    {/* Footer */}
                     <footer className="mt-12 text-gray-500 text-sm flex items-center gap-1 opacity-0 animate-fade-in delay-400 font-mono">
                         <span>RyanCanestro.com</span>
                         <span className="mx-2">•</span>
