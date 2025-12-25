@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ryan Canestro - IATSE Local 695 Sound Mixer</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617; /* Slate 950 */
+            color: white;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Animation Keyframes */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        .animate-pulse-glow {
+            animation: pulse-glow 3s infinite;
+        }
+
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #0ea5e9;
+            border-radius: 4px;
+        }
+        
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // --- Inline Icons ---
+        const Mic = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+        );
+
+        const Radio = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <circle cx="12" cy="12" r="2"/>
+                <path d="M16.24 7.76a6 6 0 0 1 0 8.49"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+        );
+
+        const ExternalLink = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/>
+                <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+        );
+
+        const Film = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <rect width="20" height="20" x="2" y="2" rx="2.18" ry="2.18"/>
+                <line x1="7" x2="7" y1="2" y2="22"/>
+                <line x1="17" x2="17" y1="2" y2="22"/>
+                <line x1="2" x2="22" y1="12" y2="12"/>
+                <line x1="2" x2="7" y1="7" y2="7"/>
+                <line x1="2" x2="7" y1="17" y2="17"/>
+                <line x1="17" x2="22" y1="17" y2="17"/>
+                <line x1="17" x2="22" y1="7" y2="7"/>
+            </svg>
+        );
+
+        // --- Background Animation Component ---
+        const SoundWaves = ({ speed = 2.0 }) => {
+            const canvasRef = useRef(null);
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                let width, height;
+                let animationFrameId;
+                
+                let bars = [];
+                const barCount = 150;
+                const barWidth = 4;
+                const barGap = 4;
+                let positionOffset = 0;
+
+                const resize = () => {
+                    width = canvas.width = window.innerWidth;
+                    height = canvas.height = window.innerHeight;
+                    // Initialize bars with a few extra for smooth scrolling
+                    bars = Array.from({ length: barCount + 2 }, () => Math.random() * 100 + 20);
+                };
+
+                const draw = () => {
+                    ctx.clearRect(0, 0, width, height);
+                    
+                    // Update position offset based on speed
+                    positionOffset += speed;
+
+                    // Check if we need to shift bars
+                    if (positionOffset >= (barWidth + barGap)) {
+                        bars.shift();
+                        // Add new bar with some variation based on the previous one to make it smoother
+                        const lastBar = bars[bars.length - 1] || 50;
+                        let newBar = lastBar + (Math.random() * 40 - 20);
+                        newBar = Math.max(20, Math.min(200, newBar)); // Clamp between 20 and 200
+                        bars.push(newBar);
+                        
+                        // Reset position offset, keeping any remainder
+                        positionOffset -= (barWidth + barGap);
+                    }
+                    
+                    const startX = (width - (barCount * (barWidth + barGap))) / 2;
+                    const centerY = height / 2;
+
+                    bars.forEach((barHeight, index) => {
+                        const x = startX + index * (barWidth + barGap) - positionOffset;
+                        
+                        // Calculate opacity based on distance from center
+                        const distanceFromCenter = Math.abs(index - barCount / 2);
+                        const opacity = Math.max(0.1, 0.8 - (distanceFromCenter / (barCount / 2)) * 0.7);
+                        
+                        // Draw the bar
+                        ctx.fillStyle = `rgba(6, 182, 212, ${opacity})`; // Cyan color
+                        ctx.fillRect(x, centerY - barHeight / 2, barWidth, barHeight);
+                        
+                        // Add a little glow effect
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = `rgba(6, 182, 212, ${opacity * 0.5})`;
+                        ctx.fillRect(x, centerY - barHeight / 2, barWidth, barHeight);
+                        ctx.shadowBlur = 0;
+                    });
+
+                    animationFrameId = requestAnimationFrame(draw);
+                };
+
+                window.addEventListener('resize', resize);
+                resize();
+                draw();
+
+                return () => {
+                    window.removeEventListener('resize', resize);
+                    cancelAnimationFrame(animationFrameId);
+                };
+            }, []);
+
+            return (
+                <canvas 
+                    ref={canvasRef} 
+                    className="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none"
+                />
+            );
+        };
+
+        const App = () => {
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-8 relative">
+                    <SoundWaves />
+
+                    {/* Main Content Card */}
+                    <main className="glass-card w-full max-w-2xl rounded-3xl p-8 md:p-12 text-center opacity-0 animate-fade-in relative overflow-hidden">
+                        
+                        {/* Decorative glow behind the image */}
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10"></div>
+
+                        {/* Image Section */}
+                        <div className="mb-8 relative inline-block group">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
+                            
+                            {/* Dropbox Image - Updated for white background extension AND blue accent ring */}
+                            <div className="p-3 bg-white rounded-full border-4 border-cyan-500 shadow-[0_0_30px_rgba(6,182,212,0.5)] animate-float">
+                                <img 
+                                    src="https://www.dropbox.com/scl/fi/pjwmljx46v85aowj1kler/Ryan_Logo.04.jpg?rlkey=yqaddskwf67greoobom211z0w&st=881ihwrn&raw=1" 
+                                    alt="Ryan Canestro Logo"
+                                    className="relative w-48 h-48 md:w-64 md:h-64 rounded-full object-contain"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Text Content */}
+                        <header className="space-y-4">
+                            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-cyan-400 opacity-0 animate-fade-in delay-100">
+                                Ryan Canestro
+                            </h1>
+                            
+                            <div className="flex flex-col items-center justify-center gap-2 opacity-0 animate-fade-in delay-200">
+                                <div className="flex items-center gap-2 text-cyan-400 font-semibold text-lg md:text-xl">
+                                    <Mic size={20} />
+                                    <span>IATSE Local 695 Sound Mixer</span>
+                                </div>
+                                <div className="inline-flex items-center gap-2 bg-slate-900/50 border border-slate-700 rounded-full px-4 py-1.5 mt-2">
+                                    <Radio size={14} className="text-emerald-400 animate-pulse" />
+                                    <span className="font-mono text-xs md:text-sm text-gray-400 tracking-wider">
+                                        FCC LICENSED OPERATOR <span className="text-white font-bold">#WQWX586</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </header>
+
+                        {/* Divider */}
+                        <div className="w-24 h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent mx-auto my-8 opacity-50 rounded-full"></div>
+
+                        {/* Links/Actions */}
+                        <div className="opacity-0 animate-fade-in delay-300">
+                            <a 
+                                href="http://www.imdb.com/name/nm5237391/reference" 
+                                target="_blank"
+                                className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                            >
+                                <Film size={20} />
+                                View Credits on IMDB
+                                <ExternalLink size={16} className="opacity-70 group-hover:translate-x-1 transition-transform" />
+                            </a>
+                        </div>
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="mt-12 text-gray-500 text-sm flex items-center gap-1 opacity-0 animate-fade-in delay-400 font-mono">
+                        <span>RyanCanestro.com</span>
+                        <span className="mx-2">•</span>
+                        <span>&copy; {new Date().getFullYear()}</span>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
