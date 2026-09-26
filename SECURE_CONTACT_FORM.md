@@ -27,7 +27,7 @@ Do **not** merge/deploy the frontend until these steps are complete. The placeho
    | --- | --- |
    | `CONTACT_RECIPIENT` | the Gmail address that should receive messages |
    | `TURNSTILE_SECRET` | the Turnstile secret key from step 1 |
-   | `ALLOWED_HOSTNAME` | `www.ryancanestro.com` |
+   | `ALLOWED_HOSTNAMES` | `ryancanestro.com,www.ryancanestro.com` |
 
 4. Deploy a **new version** as a Web app, executed as the script owner and accessible to **Anyone**. Copy its `/exec` URL if it changed and update `SCRIPT_URL` in `index.html`.
 

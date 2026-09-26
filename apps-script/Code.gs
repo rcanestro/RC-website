@@ -4,7 +4,7 @@
  * Script properties required before deployment:
  * - CONTACT_RECIPIENT: inbox that receives contact mail
  * - TURNSTILE_SECRET: Cloudflare Turnstile secret key (never put this in index.html)
- * - ALLOWED_HOSTNAME: www.ryancanestro.com
+ * - ALLOWED_HOSTNAMES: allowed domain hostnames, comma-separated
  *
  * Deploy as a Web App: execute as the script owner; who has access: Anyone.
  * The web-app URL is intentionally public. Every accepted request must carry a
@@ -82,8 +82,8 @@ function validatePayload_(payload) {
 function verifyTurnstile_(token) {
   const properties = PropertiesService.getScriptProperties();
   const secret = properties.getProperty('TURNSTILE_SECRET');
-  const expectedHostname = properties.getProperty('ALLOWED_HOSTNAME');
-  if (!secret || !expectedHostname) throw new Error('Server is not configured');
+  const allowedHostnames = properties.getProperty('ALLOWED_HOSTNAMES');
+  if (!secret || !allowedHostnames) throw new Error('Server is not configured');
 
   const response = UrlFetchApp.fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'post',
@@ -97,9 +97,13 @@ function verifyTurnstile_(token) {
   } catch (_) {
     throw new Error('Turnstile verification response was invalid');
   }
-  if (!verification.success || verification.hostname !== expectedHostname) {
+  if (!verification.success || !isAllowedHostname_(verification.hostname, allowedHostnames)) {
     throw new Error('Turnstile verification failed');
   }
+}
+
+function isAllowedHostname_(hostname, allowedHostnames) {
+  return allowedHostnames.split(',').map((value) => value.trim().toLowerCase()).includes(String(hostname).toLowerCase());
 }
 
 function enforceRateLimits_(email) {

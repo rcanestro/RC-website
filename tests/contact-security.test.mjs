@@ -22,6 +22,7 @@ test('contact form limits client-side field sizes and disables direct submit wit
 test('Apps Script verifies Turnstile before sending and validates input server-side', () => {
   assert.match(appScript, /siteverify/);
   assert.match(appScript, /verifyTurnstile_/);
+  assert.match(appScript, /isAllowedHostname_/);
   assert.match(appScript, /validatePayload_/);
   assert.match(appScript, /LockService\.getScriptLock/);
   assert.match(appScript, /escapeHtml_/);
