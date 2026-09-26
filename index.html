@@ -18,6 +18,9 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
+    <!-- Bot protection; the site key is public, the secret stays in Apps Script. -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -189,6 +192,11 @@
 
         const ContactForm = () => {
             const [status, setStatus] = useState('idle'); // idle, sending, success, error
+            const [turnstileToken, setTurnstileToken] = useState('');
+            const [turnstileReady, setTurnstileReady] = useState(false);
+            const turnstileContainerRef = useRef(null);
+            const turnstileWidgetIdRef = useRef(null);
+            const formStartedAtRef = useRef(Date.now());
             const [formData, setFormData] = useState({
                 name: '',
                 email: '',
@@ -197,30 +205,55 @@
                 website_hp: '' // Honeypot
             });
 
-            // UPDATED: Current live Google Apps Script URL
+            // Public key only. Set this when registering the site with Cloudflare Turnstile.
+            const TURNSTILE_SITE_KEY = '0x4AAAAAAFD3bmemoFczdwNW';
             const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby5mTFeSSAd6SpTo-iGj1tms5UmmAtb6m3fefsK_aSCaGh5v4ay3EySPx-iupMScLyMcg/exec";
+
+            useEffect(() => {
+                if (TURNSTILE_SITE_KEY === 'REPLACE_WITH_TURNSTILE_SITE_KEY') return undefined;
+                let cancelled = false;
+                const renderWidget = () => {
+                    if (cancelled || !window.turnstile || turnstileWidgetIdRef.current !== null || !turnstileContainerRef.current) return;
+                    turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+                        sitekey: TURNSTILE_SITE_KEY,
+                        theme: 'dark',
+                        callback: (token) => { setTurnstileToken(token); setTurnstileReady(true); },
+                        'expired-callback': () => { setTurnstileToken(''); setTurnstileReady(true); },
+                        'error-callback': () => { setTurnstileToken(''); setTurnstileReady(false); },
+                    });
+                };
+                const timer = window.setInterval(renderWidget, 100);
+                renderWidget();
+                return () => { cancelled = true; window.clearInterval(timer); };
+            }, []);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                
                 if (formData.website_hp) {
                     setStatus('success');
                     return;
                 }
+                if (!turnstileToken) {
+                    setStatus('error');
+                    return;
+                }
 
                 setStatus('sending');
-
                 try {
-                    const response = await fetch(SCRIPT_URL, {
+                    // Apps Script does not provide usable CORS response headers. The server,
+                    // not this opaque response, makes the accept/reject decision.
+                    await fetch(SCRIPT_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         cache: 'no-cache',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formData)
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ ...formData, turnstileToken, formStartedAt: formStartedAtRef.current })
                     });
-
                     setStatus('success');
                     setFormData({ name: '', email: '', subject: '', message: '', website_hp: '' });
+                    setTurnstileToken('');
+                    formStartedAtRef.current = Date.now();
+                    if (window.turnstile && turnstileWidgetIdRef.current !== null) window.turnstile.reset(turnstileWidgetIdRef.current);
                 } catch (err) {
                     console.error(err);
                     setStatus('error');
@@ -276,6 +309,7 @@
                                     value={formData.name}
                                     onChange={handleChange}
                                     disabled={status === 'sending'}
+                                    maxLength={80}
                                     className="form-input w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-white placeholder-gray-500 transition-all duration-200 disabled:opacity-50"
                                     placeholder="Your Name"
                                 />
@@ -289,6 +323,7 @@
                                     value={formData.email}
                                     onChange={handleChange}
                                     disabled={status === 'sending'}
+                                    maxLength={254}
                                     className="form-input w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-white placeholder-gray-500 transition-all duration-200 disabled:opacity-50"
                                     placeholder="your@email.com"
                                 />
@@ -304,6 +339,7 @@
                                 value={formData.subject}
                                 onChange={handleChange}
                                 disabled={status === 'sending'}
+                                maxLength={120}
                                 className="form-input w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-white placeholder-gray-500 transition-all duration-200 disabled:opacity-50"
                                 placeholder="Inquiry about..."
                             />
@@ -318,10 +354,19 @@
                                 value={formData.message}
                                 onChange={handleChange}
                                 disabled={status === 'sending'}
+                                maxLength={4000}
                                 className="form-input w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-white placeholder-gray-500 transition-all duration-200 disabled:opacity-50"
                                 placeholder="How can I help you?"
                             ></textarea>
                         </div>
+
+                        <div ref={turnstileContainerRef}></div>
+                        {TURNSTILE_SITE_KEY === 'REPLACE_WITH_TURNSTILE_SITE_KEY' && (
+                            <p className="text-amber-300 text-xs italic">The contact form is temporarily unavailable while spam protection is being configured.</p>
+                        )}
+                        {!turnstileReady && TURNSTILE_SITE_KEY !== 'REPLACE_WITH_TURNSTILE_SITE_KEY' && (
+                            <p className="text-gray-400 text-xs italic">Loading spam protection…</p>
+                        )}
 
                         {status === 'error' && (
                             <p className="text-rose-400 text-xs italic">Something went wrong. Please try again or check your connection.</p>
@@ -329,7 +374,7 @@
 
                         <button 
                             type="submit" 
-                            disabled={status === 'sending'}
+                            disabled={status === 'sending' || !turnstileToken}
                             className="w-full mt-2 flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-95 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                             {status === 'sending' ? (
