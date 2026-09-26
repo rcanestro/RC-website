@@ -9,6 +9,8 @@ test('contact form sends a Turnstile token with the request', () => {
   assert.match(site, /https:\/\/challenges\.cloudflare\.com\/turnstile\/v0\/api\.js/);
   assert.match(site, /turnstileToken/);
   assert.match(site, /turnstile\.render/);
+  assert.match(site, /new URLSearchParams\(\{ payload:/);
+  assert.match(appScript, /e\.parameter\.payload/);
 });
 
 test('contact form limits client-side field sizes and disables direct submit without Turnstile', () => {

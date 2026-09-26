@@ -37,11 +37,15 @@ function doPost(e) {
 }
 
 function parsePayload_(e) {
-  if (!e || !e.postData || typeof e.postData.contents !== 'string') {
-    throw new Error('Missing request body');
-  }
+  const formPayload = e && e.parameter && e.parameter.payload;
+  const rawPayload = typeof formPayload === 'string'
+    ? formPayload
+    : e && e.postData && typeof e.postData.contents === 'string'
+      ? e.postData.contents
+      : null;
+  if (!rawPayload) throw new Error('Missing request body');
   try {
-    return JSON.parse(e.postData.contents);
+    return JSON.parse(rawPayload);
   } catch (_) {
     throw new Error('Invalid JSON');
   }

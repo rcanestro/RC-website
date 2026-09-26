@@ -240,14 +240,14 @@
 
                 setStatus('sending');
                 try {
-                    // Apps Script does not provide usable CORS response headers. The server,
-                    // not this opaque response, makes the accept/reject decision.
+                    // Apps Script does not provide usable CORS response headers. Use a
+                    // form-encoded field so Apps Script reliably exposes it as e.parameter.
                     await fetch(SCRIPT_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         cache: 'no-cache',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ ...formData, turnstileToken, formStartedAt: formStartedAtRef.current })
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                        body: new URLSearchParams({ payload: JSON.stringify({ ...formData, turnstileToken, formStartedAt: formStartedAtRef.current }) })
                     });
                     setStatus('success');
                     setFormData({ name: '', email: '', subject: '', message: '', website_hp: '' });
